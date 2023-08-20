@@ -27,5 +27,5 @@ jobs:
         python -m poetry install
     - name: Lint with flake8 and mypy
       run: |
-        python -m poetry run python -m flake8 src/
+        python -m poetry run python -m flake8
         python -m poetry run python -m mypy src/

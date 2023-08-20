@@ -4,7 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="106d2798-bcbf-4628-ac3b-57b5cccc0b6d" name="Changes" comment="" />
+    <list default="true" id="106d2798-bcbf-4628-ac3b-57b5cccc0b6d" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/cache/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/cache/redis.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/cache/redis_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/app-testing.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/app-testing.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/poetry.lock" beforeDir="false" afterPath="$PROJECT_DIR$/poetry.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -38,7 +46,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "logger",
+    "git-widget-placeholder": "redis",
     "last_opened_file_path": "/home/irina/Dev/FileStorage",
     "settings.editor.selected.configurable": "com.jetbrains.python.black.configuration.BlackFormatterConfigurable"
   }
