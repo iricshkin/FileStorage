@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
+from api import healthcheck
 from core.config import app_settings
 from services import my_logger
 
@@ -12,6 +13,8 @@ app = FastAPI(
     openapi_url='/api/openapi.json',
     default_response_class=ORJSONResponse,
 )
+
+app.include_router(healthcheck.router, tags=['healthcheck'])
 
 
 if __name__ == '__main__':
