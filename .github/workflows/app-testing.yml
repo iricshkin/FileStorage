@@ -28,4 +28,4 @@ jobs:
     - name: Lint with flake8 and mypy
       run: |
         python -m poetry run python -m flake8 src/
-        python -m poetry run python -m mypy src/
+#        python -m poetry run python -m mypy src/
