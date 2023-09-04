@@ -2,16 +2,24 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
+from api import healthcheck
+from core.config import app_settings
+from services import my_logger
+
+logger = my_logger.get_logger(__name__)
+
 app = FastAPI(
     docs_url='/api/openapi',
     openapi_url='/api/openapi.json',
     default_response_class=ORJSONResponse,
 )
 
+app.include_router(healthcheck.router, tags=['healthcheck'])
+
 
 if __name__ == '__main__':
     uvicorn.run(
         'main:app',
-        host='127.0.0.1',
-        port=8080,
+        host=app_settings.project_host,
+        port=app_settings.project_port,
     )
