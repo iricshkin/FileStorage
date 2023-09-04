@@ -9,7 +9,6 @@ RUN apt -y update \
 
 WORKDIR /app
 
-COPY ./.env .
 COPY ./src .
 
 EXPOSE 8080
