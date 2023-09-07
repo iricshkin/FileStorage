@@ -1,0 +1,146 @@
+import io
+import os.path
+import tarfile
+import zipfile
+from io import BytesIO
+from typing import Any, Callable
+
+import py7zr
+from fastapi import HTTPException, status
+from fastapi_cache.backends.redis import RedisCacheBackend  # type: ignore
+from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore
+
+from cache.redis_utils import get_cache_or_data
+from schemas.file import Path
+from services import my_logger
+from services.base import directory_crud, file_crud
+from services.file import get_full_path
+
+logger = my_logger.get_logger(__name__)
+
+
+def is_downloadable(file_info: dict) -> None:
+    if not file_info.get('is_downloadable'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='You can not download this file.',
+        )
+
+
+async def get_file_info(db: AsyncSession, path: str) -> Any:
+    if path.find('/') != -1:
+        file_info = await file_crud.get_file_info_by_path(db=db, file_path=path)
+    else:
+        file_info = await file_crud.get_file_info_by_id(db=db, file_id=path)
+    if not file_info:
+        logger.error('Raise 404 for file with path/id %s', path)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail='File not found'
+        )
+    return file_info
+
+
+def is_file(path: str) -> bool:
+    return os.path.isfile(path)
+
+
+def get_files_paths_by_folder(full_path: str) -> list:
+    return [
+        os.path.join(full_path, f)
+        for f in os.listdir(full_path)
+        if os.path.isfile(os.path.join(full_path, f))
+    ]
+
+
+async def get_path_by_id(
+    db: AsyncSession,
+    obj_id: str,
+    cache: RedisCacheBackend,
+) -> Any:
+    redis_key = f'path_for_obj_id_{obj_id}'
+    file_info = await get_cache_or_data(
+        redis_key=redis_key,
+        cache=cache,
+        db_func_obj=file_crud.get_file_info_by_id,
+        data_schema=Path,
+        db_func_args=(db, obj_id),
+        cache_expire=3600,
+    )
+    if not file_info:
+        dir_info = await get_cache_or_data(
+            redis_key=redis_key,
+            cache=cache,
+            db_func_obj=directory_crud.get_dir_info_by_id,
+            data_schema=Path,
+            db_func_args=(db, obj_id),
+            cache_expire=3600,
+        )
+        if not dir_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Directory or file not found',
+            )
+        return dir_info.get()
+    return file_info.get('path')
+
+
+def compress_file(write_to_file_func: Callable, full_path: str) -> None:
+    if is_file(full_path):
+        write_to_file_func(full_path)
+    else:
+        files_paths = get_files_paths_by_folder(full_path)
+        for file_path in files_paths:
+            write_to_file_func(file_path)
+
+
+def zip_files(io_obj: BytesIO, full_path: str) -> tuple[io.BytesIO, str]:
+    with zipfile.ZipFile(io_obj, mode='w', compression=zipfile.ZIP_DEFLATED) as zip_io:
+        compress_file(write_to_file_func=zip_io.write, full_path=full_path)
+        zip_io.close()
+    return io_obj, 'application/x-zip-compressed'
+
+
+def tar_files(io_obj: BytesIO, full_path: str) -> tuple[io.BytesIO, str]:
+    with tarfile.open(fileobj=io_obj, mode='w:gz') as tar:
+        compress_file(write_to_file_func=tar.add, full_path=full_path)
+        tar.close()
+    return io_obj, 'application/x-gtar'
+
+
+def seven_zip_files(io_obj: BytesIO, full_path: str) -> tuple[io.BytesIO, str]:
+    with py7zr.SevenZipFile(io_obj, mode='w') as seven_zip:
+        compress_file(write_to_file_func=seven_zip.write, full_path=full_path)
+    return io_obj, 'application/x-7z-compressed'
+
+
+COMPRESSION_TO_FUNC = {
+    'zip': zip_files,
+    'tar': tar_files,
+    '7z': seven_zip_files,
+}
+
+
+def compress(io_obj: BytesIO, path: str, compression_type: str) -> Any:
+    full_path = get_full_path(path=path)
+    io_obj, media_type = COMPRESSION_TO_FUNC[compression_type](io_obj, full_path)
+    return io_obj, media_type
+
+
+async def get_compressed_file_with_media_type(
+    db: AsyncSession,
+    cache: RedisCacheBackend,
+    path: str,
+    compression_type: str,
+) -> tuple[BytesIO, str]:
+    io_obj = BytesIO()
+    if path.find('/') == -1:
+        path = await get_path_by_id(db=db, obj_id=path, cache=cache)
+    if not path.startswith('/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Path must starts with / .',
+        )
+    refreshed_io, media_type = compress(
+        io_obj=io_obj, path=path, compression_type=compression_type
+    )
+    return refreshed_io, media_type
