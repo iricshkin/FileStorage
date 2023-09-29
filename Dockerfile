@@ -7,16 +7,13 @@ ENV POETRY_VIRTUALENVS_CREATE=false
 ENV POETRY_VERSION=1.6.1
 
 COPY poetry.lock pyproject.toml app/
+WORKDIR /app
 
 RUN apt -y update \
     && pip install --upgrade pip \
     && pip install --no-cache-dir "poetry==$POETRY_VERSION" \
     && poetry install --no-root
 
-WORKDIR /app
-
 COPY ./src .
 
 EXPOSE 8080
-
-CMD python3 src/main.py
